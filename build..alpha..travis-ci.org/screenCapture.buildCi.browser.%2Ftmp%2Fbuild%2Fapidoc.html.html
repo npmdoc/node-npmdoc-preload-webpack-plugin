@@ -1,0 +1,167 @@
+<html><head></head><body><div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a href="https://github.com/googlechrome/preload-webpack-plugin">preload-webpack-plugin (v1.2.2)</a>
+</h1>
+<h4>Enhances html-webpack-plugin with link rel=preload wiring capabilities for scripts</h4>
+<div class="apidocSectionDiv"><a href="#apidoc.tableOfContents" id="apidoc.tableOfContents"><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.preload-webpack-plugin">module preload-webpack-plugin</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.preload-webpack-plugin.preload-webpack-plugin">
+            function <span class="apidocSignatureSpan"></span>preload-webpack-plugin
+            <span class="apidocSignatureSpan">(options)</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.preload-webpack-plugin" id="apidoc.module.preload-webpack-plugin">module preload-webpack-plugin</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.preload-webpack-plugin.preload-webpack-plugin" id="apidoc.element.preload-webpack-plugin.preload-webpack-plugin">
+        function <span class="apidocSignatureSpan"></span>preload-webpack-plugin
+        <span class="apidocSignatureSpan">(options)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">class PreloadPlugin {
+  constructor(options) {
+    this.options = objectAssign({}, defaultOptions, options);
+  }
+
+  apply(compiler) {
+    const options = this.options;
+    let filesToInclude = '';
+    let extractedChunks = [];
+    compiler.plugin('compilation', compilation =&gt; {
+      compilation.plugin('html-webpack-plugin-before-html-processing', (htmlPluginData, cb) =&gt; {
+        // 'asyncChunks' are chunks intended for lazy/async loading usually generated as
+        // part of code-splitting with import() or require.ensure(). By default, asyncChunks
+        // get wired up using link rel=preload when using this plugin. This behaviour can be
+        // configured to preload all types of chunks or just prefetch chunks as needed.
+        if (options.include === undefined || options.include === 'asyncChunks') {
+          let asyncChunksSource = null;
+          try {
+            asyncChunksSource = compilation
+              .chunks.filter(chunk =&gt; !chunk.isInitial())
+              .map(chunk =&gt; chunk.files);
+          } catch (e) {
+            asyncChunksSource = compilation.chunks
+              .map(chunk =&gt; chunk.files);
+          }
+          extractedChunks = [].concat.apply([], asyncChunksSource);
+        } else if (options.include === 'all') {
+            // Async chunks, vendor chunks, normal chunks.
+          extractedChunks = compilation
+              .chunks
+              .reduce((chunks, chunk) =&gt; chunks.concat(chunk.files), []);
+        } else if (Array.isArray(options.include)) {
+          // Keep only user specified chunks
+          extractedChunks = compilation
+              .chunks
+              .filter((chunk) =&gt; {
+                const chunkName = chunk.name;
+                // Works only for named chunks
+                if (!chunkName) {
+                  return false;
+                }
+                return options.include.indexOf(chunkName) &gt; -1;
+              })
+              .map(chunk =&gt; chunk.files)
+              .reduce((prev, curr) =&gt; prev.concat(curr), []);
+        }
+
+        const publicPath = compilation.outputOptions.publicPath || '';
+
+        extractedChunks.filter(entry =&gt; {
+          return this.options.fileBlacklist.every(regex =&gt; regex.test(entry) === false);
+        }).forEach(entry =&gt; {
+          entry = `${publicPath}${entry}`;
+          if (options.rel === 'preload') {
+            filesToInclude+= `&lt;link rel="${options.rel}" href="${entry}" as="${options.as}"&gt;\n`;
+          } else {
+            // If preload isn't specified, the only other valid entry is prefetch here
+            // You could specify preconnect but as we're dealing with direct paths to resources
+            // instead of origins that would make less sense.
+            filesToInclude+= `&lt;link rel="${options.rel}" href="${entry}"&gt;\n`;
+          }
+        });
+        if (htmlPluginData.html.indexOf('&lt;/head&gt;') !== -1) {
+          // If a valid closing &lt;/head&gt; is found, update it to include preload/prefetch tags
+          htmlPluginData.html = htmlPluginData.html.replace('&lt;/head&gt;', filesToInclude + '&lt;/head&gt;');
+        } else {
+          // Otherwise assume at least a &lt;body&gt; is present and update it to include a new &lt;head&gt;
+          htmlPluginData.html = htmlPluginData.html.replace('&lt;body&gt;', '&lt;head&gt;' + filesToInclude + '&lt;/head&gt;&lt;body&gt;');
+        }
+        cb(null, htmlPluginData);
+      });
+    });
+  }
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
+</body></html>
